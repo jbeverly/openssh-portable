@@ -59,10 +59,13 @@ SED=@SED@
 ENT=@ENT@
 XAUTH_PATH=@XAUTH_PATH@
 LDFLAGS=-L. -Lopenbsd-compat/ @LDFLAGS@
+LDFLAGS_SHARED=@LDFLAGS_SHARED@
 EXEEXT=@EXEEXT@
+SOEXT=@SOEXT@
 MANFMT=@MANFMT@
+PAM_MODULES=pam_ssh_agent_auth$(SOEXT)
 
-TARGETS=ssh$(EXEEXT) sshd$(EXEEXT) ssh-add$(EXEEXT) ssh-keygen$(EXEEXT) ssh-keyscan${EXEEXT} ssh-keysign${EXEEXT} ssh-pkcs11-helper$(EXEEXT) ssh-agent$(EXEEXT) scp$(EXEEXT) sftp-server$(EXEEXT) sftp$(EXEEXT)
+TARGETS=ssh$(EXEEXT) sshd$(EXEEXT) ssh-add$(EXEEXT) ssh-keygen$(EXEEXT) ssh-keyscan${EXEEXT} ssh-keysign${EXEEXT} ssh-pkcs11-helper$(EXEEXT) ssh-agent$(EXEEXT) scp$(EXEEXT) sftp-server$(EXEEXT) sftp$(EXEEXT) pam_ssh_agent_auth$(SOEXT)
 
 LIBOPENSSH_OBJS=\
 	ssh_api.o \
@@ -94,6 +97,8 @@ LIBSSH_OBJS=${LIBOPENSSH_OBJS} \
 	kexdhs.o kexgexs.o kexecdhs.o kexc25519s.o \
 	platform-pledge.o platform-tracing.o
 
+PAM_SSH_AGENT_AUTH_OBJS=pam_user_key_allowed2.o iterate_ssh_agent_keys.o userauth_pubkey_from_id.o pam_user_authorized_keys.o get_command_line.o
+
 SSHOBJS= ssh.o readconf.o clientloop.o sshtty.o \
 	sshconnect.o sshconnect1.o sshconnect2.o mux.o
 
@@ -112,9 +117,12 @@ SSHDOBJS=sshd.o auth-rhosts.o auth-passwd.o \
 	sandbox-seccomp-filter.o sandbox-capsicum.o sandbox-pledge.o \
 	sandbox-solaris.o
 
-MANPAGES	= moduli.5.out scp.1.out ssh-add.1.out ssh-agent.1.out ssh-keygen.1.out ssh-keyscan.1.out ssh.1.out sshd.8.out sftp-server.8.out sftp.1.out ssh-keysign.8.out ssh-pkcs11-helper.8.out sshd_config.5.out ssh_config.5.out
-MANPAGES_IN	= moduli.5 scp.1 ssh-add.1 ssh-agent.1 ssh-keygen.1 ssh-keyscan.1 ssh.1 sshd.8 sftp-server.8 sftp.1 ssh-keysign.8 ssh-pkcs11-helper.8 sshd_config.5 ssh_config.5
+MANPAGES	= moduli.5.out scp.1.out ssh-add.1.out ssh-agent.1.out ssh-keygen.1.out ssh-keyscan.1.out ssh.1.out sshd.8.out sftp-server.8.out sftp.1.out ssh-keysign.8.out ssh-pkcs11-helper.8.out sshd_config.5.out ssh_config.5.out pam_ssh_agent_auth.8.out 
+MANPAGES_IN	= moduli.5 scp.1 ssh-add.1 ssh-agent.1 ssh-keygen.1 ssh-keyscan.1 ssh.1 sshd.8 sftp-server.8 sftp.1 ssh-keysign.8 ssh-pkcs11-helper.8 sshd_config.5 ssh_config.5 pam_ssh_agent_auth.8
 MANTYPE		= @MANTYPE@
+
+pam_ssh_agent_auth.8: pam_ssh_agent_auth.pod
+	pod2man --section=8 --release=v2.0 --name=pam_ssh_agent_auth --official --center "PAM" pam_ssh_agent_auth.pod > pam_ssh_agent_auth.8
 
 CONFIGFILES=sshd_config.out ssh_config.out moduli.out
 CONFIGFILES_IN=sshd_config ssh_config moduli
@@ -192,6 +200,9 @@ sftp-server$(EXEEXT): $(LIBCOMPAT) libssh.a sftp.o sftp-common.o sftp-server.o s
 
 sftp$(EXEEXT): $(LIBCOMPAT) libssh.a sftp.o sftp-client.o sftp-common.o sftp-glob.o progressmeter.o
 	$(LD) -o $@ progressmeter.o sftp.o sftp-client.o sftp-common.o sftp-glob.o $(LDFLAGS) -lssh -lopenbsd-compat $(LIBS) $(LIBEDIT)
+
+pam_ssh_agent_auth$(SOEXT): $(LIBCOMPAT) $(SSHOBJS) $(PAM_SSH_AGENT_AUTH_OBJS) pam_ssh_agent_auth.o
+	    $(LD) $(LDFLAGS_SHARED) -o $@ $(SSHOBJS) $(PAM_SSH_AGENT_AUTH_OBJS) $(LDFLAGS) -lopenbsd-compat pam_ssh_agent_auth.o $(LIBS) -lpam
 
 # test driver for the loginrec code - not built by default
 logintest: logintest.o $(LIBCOMPAT) libssh.a loginrec.o

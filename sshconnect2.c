@@ -72,6 +72,7 @@
 #include "hostfile.h"
 #include "ssherr.h"
 #include "utf8.h"
+#include "identity.h"
 
 #ifdef GSSAPI
 #include "ssh-gss.h"
@@ -243,19 +244,6 @@ ssh_kex2(char *host, struct sockaddr *hostaddr, u_short port)
 
 typedef struct cauthctxt Authctxt;
 typedef struct cauthmethod Authmethod;
-typedef struct identity Identity;
-typedef struct idlist Idlist;
-
-struct identity {
-	TAILQ_ENTRY(identity) next;
-	int	agent_fd;		/* >=0 if agent supports key */
-	struct sshkey	*key;		/* public/private key */
-	char	*filename;		/* comment for agent-only keys */
-	int	tried;
-	int	isprivate;		/* key points to the private key */
-	int	userprovided;
-};
-TAILQ_HEAD(idlist, identity);
 
 struct cauthctxt {
 	const char *server_user;
